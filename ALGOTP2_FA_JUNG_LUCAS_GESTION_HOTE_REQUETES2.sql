@@ -14,22 +14,148 @@ Group by CLI_NOM
 ORDER BY total_depense desc
 
 --3
+SELECT count(CHB_PLN_CLI_OCCUPE), strftime('%Y-%m',PLN_JOUR) as date_occup
+FROM TJ_CHB_PLN_CLI
+group by date_occup
+order by date_occup asc
+
+
 
 --4
+
+SELECT count(CHB_PLN_CLI_OCCUPE), strftime('%Y-%m',PLN_JOUR) as date_occup, strftime('%m',PLN_JOUR) as date_mois,
+count(( CHB_PLN_CLI_OCCUPE) between '01' and '03')
+
+FROM TJ_CHB_PLN_CLI
+
+group by date_occup
+
+order by date_occup asc
+
 --5
-Select LIF_REMISE_POURCENT as Remise_en_Pourcent,
-LIF_REMISE_MONTANT as Remise_en_euro,
+Select ifnull(LIF_REMISE_POURCENT, 0) as Remise_en_Pourcent,
+ifnull(LIF_REMISE_MONTANT, 0) as Remise_en_euro,
 LIF_MONTANT as Montant_HT,
 LIF_TAUX_TVA as TVA,
 LIF_ID,
 
-sum(LIF_MONTANT * ((100- LIF_TAUX_TVA)/100) ) as total
---sum(LIF_MONTANT * LIF_TAUX_TVA  / (1*LIF_REMISE_POURCENT)- LIF_REMISE_MONTANT)
+sum(LIF_MONTANT * ((100+ LIF_TAUX_TVA)/100)) * ((100- ifnull(LIF_REMISE_POURCENT, 0))/100) -  (ifnull(LIF_REMISE_MONTANT, 0)) as total
+
 
 
 FROM T_LIGNE_FACTURE
 
 GROUP BY LIF_ID
 
-
 --6
+Select T_FACTURE.FAC_ID,
+FAC_DATE,
+ifnull(LIF_REMISE_POURCENT, 0) as Remise_en_Pourcent,
+ifnull(LIF_REMISE_MONTANT, 0) as Remise_en_euro,
+LIF_MONTANT as Montant_HT,
+LIF_TAUX_TVA as TVA,
+LIF_ID,
+
+sum(LIF_MONTANT * ((100+ LIF_TAUX_TVA)/100)) * ((100- ifnull(LIF_REMISE_POURCENT, 0))/100) -  (ifnull(LIF_REMISE_MONTANT, 0)) as total
+
+
+
+FROM T_LIGNE_FACTURE, T_FACTURE
+
+where T_FACTURE.FAC_ID = T_LIGNE_FACTURE.FAC_ID
+
+GROUP BY LIF_ID
+
+ORDER BY total desc;
+
+--7
+SELECT  avg(TRF_CHB_PRIX) as Prix_Moyen, TRF_DATE_DEBUT as Annees
+FROM TJ_TRF_CHB
+
+GROUP BY TRF_DATE_DEBUT
+ORDER BY TRF_DATE_DEBUT asc
+
+--8
+SELECT  avg(TRF_CHB_PRIX) as Prix_Moyen, 
+TRF_DATE_DEBUT as Annees,
+CHB_ETAGE as Etage
+
+
+FROM TJ_TRF_CHB, T_CHAMBRE
+
+where T_CHAMBRE.CHB_ID = TJ_TRF_CHB.CHB_ID
+
+GROUP BY Etage, Annees
+ORDER BY Annees, Etage asc;
+
+
+--9
+SELECT max(TRF_CHB_PRIX), CHB_ID, TRF_DATE_DEBUT
+
+FROM TJ_TRF_CHB
+
+
+Group by CHB_ID
+order by TRF_DATE_DEBUT
+
+--10
+select CHB_PLN_CLI_RESERVE as Reserve,
+ CLI_ID as Client, CHB_ID as Chambre
+From TJ_CHB_PLN_CLI
+
+Where CHB_PLN_CLI_RESERVE = 1
+AND CHB_PLN_CLI_OCCUPE = 0
+
+--11
+
+--12
+
+SELECT FAC_ID, FAC_DATE, FAC_PMT_DATE,CLI_ID
+ from T_Facture 
+ where fac_pmt_date < fac_date
+
+--13
+SELECT CLI_NOM, FAC_ID, FAC_DATE, FAC_PMT_DATE, T_client.CLI_ID
+ from T_Facture, T_client
+ where T_CLIENT.CLI_ID = T_FACTURE.CLI_ID
+AND fac_pmt_date < fac_date
+--14
+SELECT T_FACTURE.PMT_CODE, T_FACTURE.PMT_LIBELLE, T_FACTURE.FAC_ID, 
+
+sum(LIF_MONTANT * ((100- LIF_TAUX_TVA)/100) -  (LIF_REMISE_MONTANT)) as total
+FROM T_FACTURE, T_LIGNE_FACTURE, T_MODE_PAIEMENT
+WHERE T_FACTURE.FAC_ID = T_LIGNE_FACTURE.FAC_ID
+AND T_FACTURE.PMT_CODE = T_MODE_PAIEMENT.PMT_CODE
+
+GROUP BY _FACTURE.PMT_LIBELLE
+ORDER BY _FACTURE.PMT_LIBELLE, total
+
+--15
+INSERT INTO T_CLIENT(CLI_NOM, CLI_PRENOM, CLI_ENSEIGNE, TIT_CODE)
+Values ('JUNG','Lucas', '','M.');
+
+--16
+INSERT INTO T_TELEPHONE (TEL_NUMERO, TEL_LOCALISATION, TYP_CODE, CLI_ID)
+VALUES ('0621212121', 'Bureau', 'GSM', 101 );
+INSERT INTO T_ADRESSE ( CLI_ID, ADR_LIGNE1, ADR_CP, ADR_VILLE)
+VALUES (101, '9 rue montmartre', '67200', 'stratsbourg');
+
+--17
+INSERT INTO T_CHAMBRE (CHB_NUMERO, CHB_ETAGE, CHB_BAIN, CHB_DOUCHE, CHB_WC, CHB_COUCHAGE, CHB_POSTE_TEL)
+VALUES (30, '3e', 1, 1, 1, 3, 130);
+insert into TJ_TRF_CHB (TRF_CHB_PRIX, CHB_ID, TRF_DATE_DEBUT)
+VALUES (665, 30, 02-05-2017);
+
+--19
+insert into T_facture (PMT_CODE, FAC_DATE, FAC_PMT_DATE, CLI_ID)
+values ('CB', '02-05-2017', '03-05-2017', 101);
+insert into T_LIGNE_FACTURE (LIF_QTE, LIF_REMISE_POURCENT, LIF_REMISE_MONTANT, LIF_MONTANT, 
+LIF_TAUX_TVA, FAC_ID)
+VALUES ( 1,0,0,665,20.6,2375)
+
+--20
+insert into T_LIGNE_FACTURE (LIF_QTE, LIF_REMISE_POURCENT, LIF_REMISE_MONTANT, LIF_MONTANT, 
+LIF_TAUX_TVA, FAC_ID)
+VALUES ( '1','10','0','665','20.6','2375');
+
+--21
